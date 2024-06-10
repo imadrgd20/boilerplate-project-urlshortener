@@ -35,6 +35,7 @@ insertUrl=async(orgl)=>{
     
     await client.db('UrlsDb').collection('urlList').insertOne({
       'original_url':orgl,
+
       'short_url':shrt
     });
     originalUrls.push(orgl);
@@ -46,20 +47,21 @@ insertUrl=async(orgl)=>{
   }
 },
 
-startServer=()=>{
-  app.use(express.urlencoded({extended:true}));
+startServer = () => {
+  app.use(express.urlencoded({ extended: true }));
   app.use(cors());
   app.use('/public', express.static(`${process.cwd()}/public`));
   app.get('/', (req, res) => {
     res.sendFile(process.cwd() + '/views/index.html');
   });
 
+  app.post('/api/shorturl', async (req, res) => {
+    const userUrl = req.body.url;
+    const foundedIndex = originalUrls.indexOf(userUrl);
 
-  app.post('/api/shorturl',async (req,res)=>{
-    const userUrl=req.body.url,
-    foundedIndex=originalUrls.indexOf(userUrl);
-
-    if(!userUrl.includes('https://')&&!userUrl.includes('http://')) return res.json({ error: 'invalid url' });
+    // Validate URL format
+    const validUrl = /^(https?:\/\/)/i.test(userUrl);
+    if (!validUrl) return res.json({ error: 'invalid url' });
 
     if (foundedIndex < 0) {
       try {
@@ -70,29 +72,24 @@ startServer=()=>{
       }
     }
 
-    return res.json({"original_url":userUrl,"short_url":foundedIndex+1});
-    
+    return res.json({ "original_url": userUrl, "short_url": foundedIndex + 1 });
   });
-  console.log(shortUrls.indexOf(parseInt('1')))
+
   app.get('/api/shorturl/:shorturl', (req, res) => {
     const userShortUrl = req.params.shorturl;
-    const foundedIndex = shortUrls.indexOf(parseInt(userShortUrl));
-    console.log(userShortUrl+' '+foundedIndex);
+    // Ensure shortUrls are compared as strings
+    const foundedIndex = shortUrls.indexOf(userShortUrl);
+    console.log(userShortUrl + ' ' + foundedIndex);
     if (foundedIndex < 0 || foundedIndex >= originalUrls.length) {
       return res.json({ "error": "No short URL found for the given input" });
     }
-  
+
     res.redirect(originalUrls[foundedIndex]);
   });
-  
-  
 
   app.listen(port, () => {
     console.log(`Listening on port ${port}`);
   });
-
-
-
-}
+};
 
 runTheApp()
